@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Luxin Boost - Sign In</title>
+    <link rel="stylesheet" href="../assets/fonts/basic/boxicons.min.css" />
+    <script src="../assets/tailwind.js"></script>
+    <style>
+      .ipt-box {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .ipt-box input {
+        outline: none;
+        padding: 10px;
+        width: 100%;
+        background: #00000010;
+        border-radius: 6px;
+      }
+      .ipt-box label {
+        margin-top: 10px;
+        font-weight: 600;
+      }
+      .ipt-box input::placeholder {
+        -webkit-text-fill-color: rgba(0, 0, 0, 0.692);
+      }
+      .info-container {
+        display: block;
+      }
+      .title {
+        font-size: 2.2rem;
+      }
+
+      @media (max-width: 1080px) {
+        .info-container {
+          display: none;
+        }
+        .title {
+          font-size: 2rem;
+        }
+      }
+    </style>
+  </head>
+  <body class="flex items-center justify-center px-6" style="min-height: 100vh">
+    <nav class="fixed top-0 left-0 w-full px-6 py-3">
+      <ul class="w-full flex items-center justify-between">
+        <li class="font-semibold">
+          <a href="../" class="items-center justify-start flex max-w-4"
+            ><i class="bx bx-arrow-left text-3xl"></i> Back</a
+          >
+        </li>
+        <li class="font-semibold">
+          <a href="register.html" class="hover:underline">Sign up</a>
+        </li>
+      </ul>
+    </nav>
+    <main class="flex gap-40 flex-row items-center-center justify-center">
+      <div
+        class="form-container flex flex-col items-center-center justify-center"
+      >
+        <h1 class="font-bold title">Welcome back.</h1>
+        <p class="mb-1 text-md">
+          Lorem ipsum dolor sit amet, consectetur adipisicing elit.
+        </p>
+        <form action="">
+          <div class="ipt-box">
+            <label for="username">Username:</label>
+            <input
+              type="text"
+              id="username"
+              placeholder="Enter your username"
+              required
+            />
+          </div>
+          <div class="ipt-box">
+            <label for="password">Password:</label>
+            <input
+              type="password"
+              id="password"
+              placeholder="Enter your password"
+              required
+            />
+          </div>
+
+          <div class="checkbox-container py-3">
+            <input type="checkbox" id="terms" name="terms" required />
+            <label for="terms">Remember login details.</label>
+          </div>
+          <button
+            class="bg-black/90 hover:bg-black text-slate-50 w-full py-3 rounded-lg"
+            type="submit"
+          >
+            Continue to account.
+          </button>
+        </form>
+      </div>
+      <div class="info-container">
+        <img
+          src="../assets/images/colour.png"
+          class="w-96 select-none"
+          alt=""
+        />
+      </div>
+    </main>
+  </body>
+</html>
