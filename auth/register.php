@@ -163,6 +163,9 @@ Loading...`;
 
               errorText.textContent = data;
               errorBox.style.display = "flex";
+              if ('vibrate' in navigator) {
+                navigator.vibrate([200, 100, 200,]);
+              }
 
               setTimeout(() => {
                 errorBox.style.display = "none";
@@ -175,6 +178,9 @@ Loading...`;
 
             errorText.textContent = "Network error. Please try again.";
             errorText.style.display = "flex";
+            if ('vibrate' in navigator) {
+              navigator.vibrate([200, 100, 200,]);
+            }
 
             setTimeout(() => {
               errorText.style.display = "none";

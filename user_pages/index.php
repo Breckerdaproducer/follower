@@ -1,6 +1,12 @@
 <?php
 session_start();
+include("../assets/db/db.php");
 session_destroy();
+$platform = $conn->prepare('SELECT * FROM platforms');
+$platform->execute();
+
+$platform = $platform->get_result();
+
 ?>
 
 <html lang="en">
@@ -97,7 +103,7 @@ session_destroy();
       <div class="flex items-center justify-between">
         <!-- Logo -->
         <div class="flex cursor-pointer items-center space-x-3" onclick="location.href='../'">
-          <div class="w-8 h-8 overflow-hidden bg-primary rounded-lg flex items-center justify-center">
+          <div class="w-8 h-8 overflow-hidden bg-primary rounded-md flex items-center justify-center">
             <img src="../assets/images/logo.webp" alt="" />
           </div>
           <span class="text-xl font-bold text-gray-900">Luxin Boost</span>
@@ -221,60 +227,37 @@ session_destroy();
             <i class="ri-arrow-down-s-line ml-2"></i>
           </button>
         </div>
+        <?php
+        if ($platform->num_rows > 0) {
+          while ($platform_result = $platform->fetch_assoc()) {
 
-        <!-- WhatsApp Button -->
-        <div class="relative">
-          <button
-            class="filter-btn px-4 py-2 bg-gray-100 text-gray-700 rounded-full text-sm font-medium hover:bg-gray-200 transition-colors whitespace-nowrap !rounded-button flex items-center">
-            <i class="ri-whatsapp-fill mr-2"></i>WhatsApp
-            <i class="ri-arrow-down-s-line ml-2"></i>
-          </button>
-        </div>
 
-        <!-- Facebook Button -->
-        <div class="relative">
-          <button
-            class="filter-btn px-4 py-2 bg-gray-100 text-gray-700 rounded-full text-sm font-medium hover:bg-gray-200 transition-colors whitespace-nowrap !rounded-button flex items-center">
-            <i class="ri-facebook-fill mr-2"></i>Facebook
-            <i class="ri-arrow-down-s-line ml-2"></i>
-          </button>
-        </div>
+            ?>
+            <!-- WhatsApp Button -->
+            <div class="relative">
+              <button
+                class="filter-btn px-4 py-2 bg-gray-100 text-gray-700 rounded-full text-sm font-medium hover:bg-gray-200 transition-colors whitespace-nowrap !rounded-button flex items-center">
+                <?php if ($platform_result['id'] === 1) { ?> <i class="ri-whatsapp-fill mr-2"></i>
+                <?php } elseif ($platform_result['id'] === 2) { ?> <i class="ri-facebook-fill mr-2"></i>
+                <?php } elseif ($platform_result['id'] === 3) { ?> <i class="ri-tiktok-fill mr-2"></i>
+                <?php } elseif ($platform_result['id'] === 4) { ?> <i class="ri-youtube-fill mr-2"></i>
+                <?php } elseif ($platform_result['id'] === 5) { ?> <i class="ri-instagram-fill mr-2"></i>
+                <?php } elseif ($platform_result['id'] === 6) { ?> <i class="ri-twitter-x-fill mr-2"></i>
+                <?php } ?>
+                <?php echo htmlspecialchars($platform_result['name']); ?>
 
-        <!-- TikTok Button -->
-        <div class="relative">
-          <button
-            class="filter-btn px-4 py-2 bg-gray-100 text-gray-700 rounded-full text-sm font-medium hover:bg-gray-200 transition-colors whitespace-nowrap !rounded-button flex items-center">
-            <i class="ri-tiktok-fill mr-2"></i>TikTok
-            <i class="ri-arrow-down-s-line ml-2"></i>
-          </button>
-        </div>
+                <i class="ri-arrow-down-s-line ml-2"></i>
+              </button>
+            </div>
+          <?php }
+        }
+        ?>
 
-        <!-- YouTube Button -->
-        <div class="relative">
-          <button
-            class="filter-btn px-4 py-2 bg-gray-100 text-gray-700 rounded-full text-sm font-medium hover:bg-gray-200 transition-colors whitespace-nowrap !rounded-button flex items-center">
-            <i class="ri-youtube-fill mr-2"></i>YouTube
-            <i class="ri-arrow-down-s-line ml-2"></i>
-          </button>
-        </div>
 
-        <!-- Instagram Button -->
-        <div class="relative">
-          <button
-            class="filter-btn px-4 py-2 bg-gray-100 text-gray-700 rounded-full text-sm font-medium hover:bg-gray-200 transition-colors whitespace-nowrap !rounded-button flex items-center">
-            <i class="ri-instagram-fill mr-2"></i>Instagram
-            <i class="ri-arrow-down-s-line ml-2"></i>
-          </button>
-        </div>
 
-        <!-- X (Twitter) Button -->
-        <div class="relative">
-          <button
-            class="filter-btn px-4 py-2 bg-gray-100 text-gray-700 rounded-full text-sm font-medium hover:bg-gray-200 transition-colors whitespace-nowrap !rounded-button flex items-center">
-            <i class="ri-twitter-x-fill mr-2"></i>X (Twitter)
-            <i class="ri-arrow-down-s-line ml-2"></i>
-          </button>
-        </div>
+
+
+
       </div>
     </div>
   </div>
@@ -287,78 +270,170 @@ session_destroy();
     </div>
     <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">🌍 Global</a>
   </div>
+  <?php
+  $num = 1;
+  $fetch = $conn->prepare('SELECT * FROM countries WHERE platform_id = ?');
+  $fetch->bind_param('i', $num);
+  $fetch->execute();
+  $fetch = $fetch->get_result();
 
+
+  ?>
   <!-- WhatsApp Dropdown -->
   <div class="dropdown-menu fixed bg-white border border-gray-200 rounded-lg shadow-xl py-2 min-w-48 hidden z-[9999]">
     <div class="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide border-b border-gray-100">
       Available Countries
     </div>
-    <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">🇮🇳 India</a>
-    <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">🇧🇷 Brazil</a>
-    <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">🇲🇽 Mexico</a>
-    <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">🇳🇬 Nigeria</a>
-    <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">🇦🇷 Argentina</a>
-  </div>
+    <?php
+    if ($fetch->num_rows > 0) {
+      while ($fetch_result = $fetch->fetch_assoc()) {
 
-  <!-- Facebook Dropdown -->
+
+        ?>
+        <a href="#"
+          class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"><?php echo htmlspecialchars($fetch_result['name']); ?></a>
+        <?php
+      }
+    }
+    ?>
+  </div>
+  <?php
+  $num = 2;
+  $fetch = $conn->prepare('SELECT * FROM countries WHERE platform_id = ?');
+  $fetch->bind_param('i', $num);
+  $fetch->execute();
+  $fetch = $fetch->get_result();
+
+
+  ?>
+  <!-- WhatsApp Dropdown -->
   <div class="dropdown-menu fixed bg-white border border-gray-200 rounded-lg shadow-xl py-2 min-w-48 hidden z-[9999]">
     <div class="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide border-b border-gray-100">
       Available Countries
     </div>
-    <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">🇺🇸 United States</a>
-    <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">🇮🇳 India</a>
-    <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">🇧🇷 Brazil</a>
-    <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">🇮🇩 Indonesia</a>
-    <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">🇲🇽 Mexico</a>
-  </div>
+    <?php
+    if ($fetch->num_rows > 0) {
+      while ($fetch_result = $fetch->fetch_assoc()) {
 
-  <!-- TikTok Dropdown -->
+
+        ?>
+        <a href="#"
+          class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"><?php echo htmlspecialchars($fetch_result['name']); ?></a>
+        <?php
+      }
+    }
+    ?>
+  </div>
+  <?php
+  $num = 3;
+  $fetch = $conn->prepare('SELECT * FROM countries WHERE platform_id = ?');
+  $fetch->bind_param('i', $num);
+  $fetch->execute();
+  $fetch = $fetch->get_result();
+
+
+  ?>
+  <!-- WhatsApp Dropdown -->
   <div class="dropdown-menu fixed bg-white border border-gray-200 rounded-lg shadow-xl py-2 min-w-48 hidden z-[9999]">
     <div class="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide border-b border-gray-100">
       Available Countries
     </div>
-    <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">🇨🇳 China</a>
-    <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">🇺🇸 United States</a>
-    <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">🇮🇩 Indonesia</a>
-    <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">🇧🇷 Brazil</a>
-    <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">🇷🇺 Russia</a>
-  </div>
+    <?php
+    if ($fetch->num_rows > 0) {
+      while ($fetch_result = $fetch->fetch_assoc()) {
 
-  <!-- YouTube Dropdown -->
+
+        ?>
+        <a href="#"
+          class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"><?php echo htmlspecialchars($fetch_result['name']); ?></a>
+        <?php
+      }
+    }
+    ?>
+  </div>
+  <?php
+  $num = 4;
+  $fetch = $conn->prepare('SELECT * FROM countries WHERE platform_id = ?');
+  $fetch->bind_param('i', $num);
+  $fetch->execute();
+  $fetch = $fetch->get_result();
+
+
+  ?>
+  <!-- WhatsApp Dropdown -->
   <div class="dropdown-menu fixed bg-white border border-gray-200 rounded-lg shadow-xl py-2 min-w-48 hidden z-[9999]">
     <div class="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide border-b border-gray-100">
       Available Countries
     </div>
-    <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">🇺🇸 United States</a>
-    <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">🇮🇳 India</a>
-    <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">🇧🇷 Brazil</a>
-    <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">🇯🇵 Japan</a>
-    <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">🇷🇺 Russia</a>
-  </div>
+    <?php
+    if ($fetch->num_rows > 0) {
+      while ($fetch_result = $fetch->fetch_assoc()) {
 
-  <!-- Instagram Dropdown -->
+
+        ?>
+        <a href="#"
+          class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"><?php echo htmlspecialchars($fetch_result['name']); ?></a>
+        <?php
+      }
+    }
+    ?>
+  </div>
+  <?php
+  $num = 5;
+  $fetch = $conn->prepare('SELECT * FROM countries WHERE platform_id = ?');
+  $fetch->bind_param('i', $num);
+  $fetch->execute();
+  $fetch = $fetch->get_result();
+
+
+  ?>
+  <!-- WhatsApp Dropdown -->
   <div class="dropdown-menu fixed bg-white border border-gray-200 rounded-lg shadow-xl py-2 min-w-48 hidden z-[9999]">
     <div class="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide border-b border-gray-100">
       Available Countries
     </div>
-    <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">🇺🇸 United States</a>
-    <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">🇮🇳 India</a>
-    <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">🇧🇷 Brazil</a>
-    <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">🇮🇩 Indonesia</a>
-    <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">🇹🇷 Turkey</a>
-  </div>
+    <?php
+    if ($fetch->num_rows > 0) {
+      while ($fetch_result = $fetch->fetch_assoc()) {
 
-  <!-- X (Twitter) Dropdown -->
+
+        ?>
+        <a href="#"
+          class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"><?php echo htmlspecialchars($fetch_result['name']); ?></a>
+        <?php
+      }
+    }
+    ?>
+  </div>
+  <?php
+  $num = 6;
+  $fetch = $conn->prepare('SELECT * FROM countries WHERE platform_id = ?');
+  $fetch->bind_param('i', $num);
+  $fetch->execute();
+  $fetch = $fetch->get_result();
+
+
+  ?>
+  <!-- WhatsApp Dropdown -->
   <div class="dropdown-menu fixed bg-white border border-gray-200 rounded-lg shadow-xl py-2 min-w-48 hidden z-[9999]">
     <div class="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide border-b border-gray-100">
       Available Countries
     </div>
-    <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">🇺🇸 United States</a>
-    <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">🇯🇵 Japan</a>
-    <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">🇬🇧 United Kingdom</a>
-    <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">🇮🇳 India</a>
-    <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">🇧🇷 Brazil</a>
+    <?php
+    if ($fetch->num_rows > 0) {
+      while ($fetch_result = $fetch->fetch_assoc()) {
+
+
+        ?>
+        <a href="#"
+          class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"><?php echo htmlspecialchars($fetch_result['name']); ?></a>
+        <?php
+      }
+    }
+    ?>
   </div>
+
+
 
   <!-- Main Content -->
   <main class="pt-40 pb-8 px-6">

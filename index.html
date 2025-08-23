@@ -115,12 +115,14 @@
 
             <div class="flex flex-col sm:flex-row gap-4 mb-8">
               <button
+                onclick="location.href='auth/validate'"
                 class="bg-gray-900 text-white px-8 py-4 rounded-lg text-sm font-semibold hover:bg-gray-800 transition-colors inline-flex items-center justify-center"
               >
                 Start Growing Today
                 <i class="fas fa-arrow-right ml-2"></i>
               </button>
               <button
+                onclick="location.href='auth/validate'"
                 class="border border-gray-300 text-gray-700 px-8 py-4 rounded-lg text-sm font-semibold hover:border-blue-600 hover:text-blue-600 transition-colors inline-flex items-center justify-center"
               >
                 <i class="fas fa-user-friends mr-2"></i>
@@ -199,6 +201,7 @@
               </div>
 
               <!-- Floating elements -->
+
               <div
                 class="absolute -top-4 -right-4 bg-yellow-400 text-yellow-900 h-10 flex items-center justify-center w-10 rounded-full shadow-lg floating-animation"
               >
@@ -482,7 +485,7 @@
     </div>
 
     <div
-      class="se1 container mx-auto px-4 py-16 text-center sm:sticky sm:top-0"
+      class="se1 container mx-auto px-4 py-16 text-center sm:sticky sm:-top-20"
       id="pricing"
     >
       <div class="cnwidth max-w-7xl mx-auto">
@@ -640,20 +643,24 @@
     </div>
 
     <!-- Testimonials -->
-    <section id="testimonials" class="py-20 bg-gray-50 sm:sticky sm:top-0">
+    <section id="testimonials" class="py-20 bg-gray-50 sm:sticky sm:-top-20">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="text-center mb-16">
-          <h2 class="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
+          <h2
+            class="text-3xl sm:text-4xl auto-show font-bold text-gray-900 mb-4"
+          >
             Client Success Stories
           </h2>
-          <p class="text-lg text-gray-600">
+          <p class="text-lg text-gray-600 showe">
             Join thousands of satisfied clients who have transformed their
             social media presence
           </p>
         </div>
 
         <div class="grid md:grid-cols-3 gap-8 mb-12">
-          <div class="bg-white rounded-xl p-8 shadow-sm card-hover">
+          <div
+            class="choosepoints bg-white rounded-xl p-8 shadow-sm card-hover"
+          >
             <div class="flex items-center mb-4">
               <div class="flex space-x-1">
                 <i class="fas fa-star text-yellow-400"></i>
@@ -681,7 +688,9 @@
             </div>
           </div>
 
-          <div class="bg-white rounded-xl p-8 shadow-sm card-hover">
+          <div
+            class="choosepoints bg-white rounded-xl p-8 shadow-sm card-hover"
+          >
             <div class="flex items-center mb-4">
               <div class="flex space-x-1">
                 <i class="fas fa-star text-yellow-400"></i>
@@ -709,7 +718,9 @@
             </div>
           </div>
 
-          <div class="bg-white rounded-xl p-8 shadow-sm card-hover">
+          <div
+            class="choosepoints bg-white rounded-xl p-8 shadow-sm card-hover"
+          >
             <div class="flex items-center mb-4">
               <div class="flex space-x-1">
                 <i class="fas fa-star text-yellow-400"></i>
@@ -760,11 +771,6 @@
       class="bg-gradient-to-r sm:sticky sm:top-0 from-black via-blue-900 to-black overflow-hidden"
       id="footer"
     >
-      <!-- Particle effect overlay -->
-      <div
-        class="absolute inset-0 bg-gradient-to-t from-transparent to-white opacity-5"
-      ></div>
-
       <div
         class="relative max-w-7xl mx-auto flex flex-col py-8 md:pt-16 px-4 z-10"
       >
@@ -1412,14 +1418,10 @@
           nav.classList.remove("backdrop-blur-md");
         }
       });
-
-      // Mobile menu toggle (basic implementation)
-      document
-        .querySelector(".md\\:hidden button")
-        .addEventListener("click", function () {
-          // Mobile menu toggle logic would go here
-          console.log("Mobile menu toggled");
-        });
+      const choosepoints = document.querySelectorAll(".choosepoints");
+      choosepoints.forEach((point) => {
+        point.classList.add("image-show");
+      });
     </script>
 
     <script>
