@@ -1,0 +1,34 @@
+# Turn on the Rewrite Engine
+RewriteEngine On
+
+# Options to prevent infinite loops and ensure proper file handling
+# If the requested path is a real file, do nothing
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+# If the requested path is a real directory, do nothing
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L] # Stop processing if it's a real file or directory
+
+# 1. Rule for specific clean URLs like /products/123 to products.php?id=123
+# This needs to be more specific than the general .php hiding rule
+# It handles both /products/123 and /products/123/
+# RewriteRule ^products/([0-9]+)/?$ dashboard.php?id=$1 [NC,L]
+
+# 2. General rule to handle URLs with a trailing slash
+# This rule will rewrite URLs like /index/ to /index.php
+RewriteRule ^([^\./]+)/$ $1.php [NC,L]
+
+# 3. General rule to hide the .php extension for any page
+# This rule will rewrite URLs like /place_order to /place_order.php
+# It also handles an optional trailing slash (e.g., /place_order/)
+RewriteRule ^([^\./]+)/?$ $1.php [NC,L]
+
+# 4. Rule to handle URLs with a .php extension and remove it
+# This ensures that URLs like /place_order.php are rewritten to /place_order
+RewriteCond %{THE_REQUEST} ^[A-Z]{3,}\s([^.]+)\.php [NC]
+RewriteRule ^ %1 [R=301,L]
+
+# 5. Rule to ensure all URLs are rewritten to their corresponding .php files
+# This rule will handle any remaining URLs that haven't been caught by the previous rules
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^([^\.]+)$ $1.php [NC,L]
