@@ -1,7 +1,7 @@
 <?php
 session_start();
 include("../assets/db/db.php");
-session_destroy();
+
 $platform = $conn->prepare('SELECT * FROM platforms');
 $platform->execute();
 
@@ -755,6 +755,7 @@ $platform = $platform->get_result();
           </div>
         </div>
       </div>
+
 
       <!-- Additional WhatsApp Business Card -->
       <div class="masonry-item">

@@ -142,7 +142,7 @@ Loading...`;
               errorText.textContent = data;
               errorBox.style.display = "flex";
               if ('vibrate' in navigator) {
-                navigator.vibrate([200, 100, 200,]);
+                navigator.vibrate([200, 100, 200]);
               }
               setTimeout(() => {
                 // errorText.textContent = data
