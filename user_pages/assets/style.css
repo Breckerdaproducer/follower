@@ -1,0 +1,25 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap");
+
+body {
+  font-family: "Inter", sans-serif;
+}
+
+:where([class^="ri-"])::before {
+  content: "\f3c2";
+}
+
+.masonry-item {
+  break-inside: avoid;
+  margin-bottom: 1.5rem;
+}
+
+.hover-button {
+  opacity: 0;
+  transform: translateY(10px);
+  transition: all 0.3s ease;
+}
+
+.card:hover .hover-button {
+  opacity: 1;
+  transform: translateY(0);
+}
