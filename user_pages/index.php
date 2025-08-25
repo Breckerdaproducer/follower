@@ -4,20 +4,131 @@ include("../assets/db/db.php");
 if (!isset($_SESSION['luxin_user'])) {
   header('location: ../auth/login');
 }
+
+// Handle search query
+$search_query = isset($_GET['search']) ? trim($_GET['search']) : '';
+
 // select platform from database
 $platform = $conn->prepare('SELECT * FROM platforms');
 $platform->execute();
 $platform = $platform->get_result();
+
 // select user from database
 $select_user = $conn->prepare('SELECT * FROM users WHERE user_id = ?');
 $select_user->bind_param('i', $_SESSION['luxin_user']);
 $select_user->execute();
 $select_user = $select_user->get_result();
 $user = $select_user->fetch_assoc();
-// select accounts from database
-$accounts = $conn->prepare('SELECT * FROM accounts');
+
+// Enhanced accounts query with improved multi-term search functionality
+if (!empty($search_query)) {
+  // Split search query into individual terms
+  $search_terms = array_filter(array_map('trim', explode(' ', $search_query)));
+
+  if (!empty($search_terms)) {
+    // Build dynamic WHERE clause for multiple terms
+    $where_conditions = [];
+    $bind_params = [];
+    $bind_types = '';
+
+    foreach ($search_terms as $term) {
+      // Each term should match at least one field
+      $term_condition = "(
+                username LIKE ? OR 
+                platform LIKE ? OR 
+                location LIKE ? OR 
+                s_1 LIKE ? OR 
+                s_2 LIKE ? OR 
+                s_3 LIKE ? OR 
+                CAST(followers AS CHAR) LIKE ? OR 
+                CAST(price AS CHAR) LIKE ?
+            )";
+
+      $where_conditions[] = $term_condition;
+
+      // Add the term 8 times for each field check
+      $search_param = "%{$term}%";
+      for ($i = 0; $i < 8; $i++) {
+        $bind_params[] = $search_param;
+        $bind_types .= 's';
+      }
+    }
+
+    // Join all conditions with AND (all terms must match)
+    $where_clause = implode(' AND ', $where_conditions);
+
+    $accounts_sql = "SELECT * FROM accounts WHERE {$where_clause} ORDER BY followers DESC";
+    $accounts = $conn->prepare($accounts_sql);
+
+    if (!empty($bind_params)) {
+      $accounts->bind_param($bind_types, ...$bind_params);
+    }
+  } else {
+    // Fallback to show all if no valid terms
+    $accounts = $conn->prepare('SELECT * FROM accounts ORDER BY followers DESC');
+  }
+} else {
+  // Default query to show all accounts
+  $accounts = $conn->prepare('SELECT * FROM accounts ORDER BY followers DESC');
+}
+
 $accounts->execute();
 $accounts = $accounts->get_result();
+
+// Alternative approach: More flexible search with keyword matching
+function searchAccountsFlexible($conn, $search_query)
+{
+  if (empty($search_query)) {
+    $accounts = $conn->prepare('SELECT * FROM accounts ORDER BY followers DESC');
+    $accounts->execute();
+    return $accounts->get_result();
+  }
+
+  // Split search into terms
+  $search_terms = array_filter(array_map('trim', explode(' ', strtolower($search_query))));
+
+  if (empty($search_terms)) {
+    $accounts = $conn->prepare('SELECT * FROM accounts ORDER BY followers DESC');
+    $accounts->execute();
+    return $accounts->get_result();
+  }
+
+  // Get all accounts first
+  $all_accounts = $conn->prepare('SELECT * FROM accounts ORDER BY followers DESC');
+  $all_accounts->execute();
+  $all_accounts_result = $all_accounts->get_result();
+
+  $matching_accounts = [];
+
+  while ($account = $all_accounts_result->fetch_assoc()) {
+    $account_text = strtolower(
+      $account['username'] . ' ' .
+      $account['platform'] . ' ' .
+      $account['location'] . ' ' .
+      $account['s_1'] . ' ' .
+      $account['s_2'] . ' ' .
+      $account['s_3'] . ' ' .
+      $account['followers'] . ' ' .
+      $account['price']
+    );
+
+    // Check if all search terms are found in the account text
+    $all_terms_found = true;
+    foreach ($search_terms as $term) {
+      if (strpos($account_text, $term) === false) {
+        $all_terms_found = false;
+        break;
+      }
+    }
+
+    if ($all_terms_found) {
+      $matching_accounts[] = $account;
+    }
+  }
+
+  return $matching_accounts;
+}
+
 ?>
 
 <html lang="en">
@@ -72,13 +183,19 @@ $accounts = $accounts->get_result();
 
         <!-- Desktop Search Bar -->
         <div class="flex-1 hidden lg:block max-w-2xl mx-8">
-          <div class="relative">
+          <form method="GET" action="" class="relative">
             <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
               <i class="ri-search-line text-gray-400"></i>
             </div>
-            <input type="text" placeholder="Search accounts by platform, followers, or price..."
+            <input type="text" name="search" id="searchInput" value="<?php echo htmlspecialchars($search_query); ?>"
+              placeholder="Search accounts by platform, followers, or price..."
               class="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none text-sm" />
-          </div>
+            <?php if (!empty($search_query)): ?>
+              <button type="button" onclick="clearSearch()" class="absolute inset-y-0 right-0 pr-3 flex items-center">
+                <i class="ri-close-line text-gray-400 hover:text-gray-600 cursor-pointer"></i>
+              </button>
+            <?php endif; ?>
+          </form>
         </div>
 
         <!-- User Menu -->
@@ -131,13 +248,14 @@ $accounts = $accounts->get_result();
 
             <!-- Mobile Search Bar -->
             <div class="p-4 border-b border-gray-100 lg:hidden">
-              <div class="relative">
+              <form method="GET" action="" class="relative">
                 <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <i class="ri-search-line text-gray-400"></i>
                 </div>
-                <input type="text" placeholder="Search accounts..."
+                <input type="text" name="search" id="mobileSearchInput"
+                  value="<?php echo htmlspecialchars($search_query); ?>" placeholder="Search accounts..."
                   class="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none text-sm" />
-              </div>
+              </form>
             </div>
 
             <!-- Menu Items -->
@@ -183,44 +301,41 @@ $accounts = $accounts->get_result();
   <!-- Filter Bar -->
   <div class="fixed top-20 left-0 right-0 bg-white border-b border-gray-100 z-40">
     <div class="px-6 py-4">
-      <div class="flex items-center space-x-4 overflow-x-auto overflow-visible">
-        <!-- All Platforms Button -->
-        <div class="relative">
-          <button
-            class="filter-btn active px-4 py-2 bg-primary text-white rounded-full text-sm font-medium whitespace-nowrap !rounded-button flex items-center">
-            All Platforms
-            <i class="ri-arrow-down-s-line ml-2"></i>
-          </button>
+      <div class="flex items-center justify-between">
+        <div class="flex items-center space-x-4 overflow-x-auto overflow-visible">
+          <!-- All Platforms Button -->
+          <div class="relative">
+            <button
+              class="filter-btn active px-4 py-2 bg-primary text-white rounded-full text-sm font-medium whitespace-nowrap !rounded-button flex items-center">
+              All Platforms
+              <i class="ri-arrow-down-s-line ml-2"></i>
+            </button>
+          </div>
+          <?php
+          if ($platform->num_rows > 0) {
+            while ($platform_result = $platform->fetch_assoc()) {
+              ?>
+              <!-- Platform Button -->
+              <div class="relative">
+                <button
+                  class="filter-btn px-4 py-2 bg-gray-100 text-gray-700 rounded-full text-sm font-medium hover:bg-gray-200 transition-colors whitespace-nowrap !rounded-button flex items-center">
+                  <?php if ($platform_result['id'] === 1) { ?> <i class="ri-whatsapp-fill mr-2"></i>
+                  <?php } elseif ($platform_result['id'] === 2) { ?> <i class="ri-facebook-fill mr-2"></i>
+                  <?php } elseif ($platform_result['id'] === 3) { ?> <i class="ri-tiktok-fill mr-2"></i>
+                  <?php } elseif ($platform_result['id'] === 4) { ?> <i class="ri-youtube-fill mr-2"></i>
+                  <?php } elseif ($platform_result['id'] === 5) { ?> <i class="ri-instagram-fill mr-2"></i>
+                  <?php } ?>
+                  <?php echo htmlspecialchars($platform_result['name']); ?>
+
+                  <i class="ri-arrow-down-s-line ml-2"></i>
+                </button>
+              </div>
+            <?php }
+          }
+          ?>
         </div>
-        <?php
-        if ($platform->num_rows > 0) {
-          while ($platform_result = $platform->fetch_assoc()) {
 
-
-            ?>
-            <!-- WhatsApp Button -->
-            <div class="relative">
-              <button
-                class="filter-btn px-4 py-2 bg-gray-100 text-gray-700 rounded-full text-sm font-medium hover:bg-gray-200 transition-colors whitespace-nowrap !rounded-button flex items-center">
-                <?php if ($platform_result['id'] === 1) { ?> <i class="ri-whatsapp-fill mr-2"></i>
-                <?php } elseif ($platform_result['id'] === 2) { ?> <i class="ri-facebook-fill mr-2"></i>
-                <?php } elseif ($platform_result['id'] === 3) { ?> <i class="ri-tiktok-fill mr-2"></i>
-                <?php } elseif ($platform_result['id'] === 4) { ?> <i class="ri-youtube-fill mr-2"></i>
-                <?php } elseif ($platform_result['id'] === 5) { ?> <i class="ri-instagram-fill mr-2"></i>
-                <?php } ?>
-                <?php echo htmlspecialchars($platform_result['name']); ?>
-
-                <i class="ri-arrow-down-s-line ml-2"></i>
-              </button>
-            </div>
-          <?php }
-        }
-        ?>
-
-
-
-
-
+        <!-- Search Results Info -->
 
       </div>
     </div>
@@ -232,182 +347,135 @@ $accounts = $accounts->get_result();
     <div class="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide border-b border-gray-100">
       All Countries
     </div>
-    <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">🌍 Global</a>
+    <a href="./" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">🌍 Global</a>
   </div>
+
   <?php
-  $num = 1;
-  $fetch = $conn->prepare('SELECT * FROM countries WHERE platform_id = ?');
-  $fetch->bind_param('i', $num);
-  $fetch->execute();
-  $fetch = $fetch->get_result();
-
-
-  ?>
-  <!-- WhatsApp Dropdown -->
-  <div class="dropdown-menu fixed bg-white border border-gray-200 rounded-lg shadow-xl py-2 min-w-48 hidden z-[9999]">
-    <div class="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide border-b border-gray-100">
-      Available Countries
-    </div>
-    <?php
-    if ($fetch->num_rows > 0) {
-      while ($fetch_result = $fetch->fetch_assoc()) {
-
-
-        ?>
-        <a href="#"
-          class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"><?php echo htmlspecialchars($fetch_result['name']); ?></a>
-        <?php
-      }
-    }
+  // Generate dropdown menus for each platform
+  for ($platform_id = 1; $platform_id <= 5; $platform_id++) {
+    $fetch = $conn->prepare('SELECT * FROM countries WHERE platform_id = ?');
+    $fetch->bind_param('i', $platform_id);
+    $fetch->execute();
+    $fetch = $fetch->get_result();
     ?>
-  </div>
-  <?php
-  $num = 2;
-  $fetch = $conn->prepare('SELECT * FROM countries WHERE platform_id = ?');
-  $fetch->bind_param('i', $num);
-  $fetch->execute();
-  $fetch = $fetch->get_result();
 
-
-  ?>
-  <!-- WhatsApp Dropdown -->
-  <div class="dropdown-menu fixed bg-white border border-gray-200 rounded-lg shadow-xl py-2 min-w-48 hidden z-[9999]">
-    <div class="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide border-b border-gray-100">
-      Available Countries
-    </div>
-    <?php
-    if ($fetch->num_rows > 0) {
-      while ($fetch_result = $fetch->fetch_assoc()) {
-
-
-        ?>
-        <a href="#"
-          class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"><?php echo htmlspecialchars($fetch_result['name']); ?></a>
-        <?php
-      }
-    }
-    ?>
-  </div>
-  <?php
-  $num = 3;
-  $fetch = $conn->prepare('SELECT * FROM countries WHERE platform_id = ?');
-  $fetch->bind_param('i', $num);
-  $fetch->execute();
-  $fetch = $fetch->get_result();
-
-
-  ?>
-  <!-- WhatsApp Dropdown -->
-  <div class="dropdown-menu fixed bg-white border border-gray-200 rounded-lg shadow-xl py-2 min-w-48 hidden z-[9999]">
-    <div class="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide border-b border-gray-100">
-      Available Countries
-    </div>
-    <?php
-    if ($fetch->num_rows > 0) {
-      while ($fetch_result = $fetch->fetch_assoc()) {
-
-
-        ?>
-        <a href="#"
-          class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"><?php echo htmlspecialchars($fetch_result['name']); ?></a>
-        <?php
-      }
-    }
-    ?>
-  </div>
-  <?php
-  $num = 4;
-  $fetch = $conn->prepare('SELECT * FROM countries WHERE platform_id = ?');
-  $fetch->bind_param('i', $num);
-  $fetch->execute();
-  $fetch = $fetch->get_result();
-
-
-  ?>
-  <!-- WhatsApp Dropdown -->
-  <div class="dropdown-menu fixed bg-white border border-gray-200 rounded-lg shadow-xl py-2 min-w-48 hidden z-[9999]">
-    <div class="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide border-b border-gray-100">
-      Available Countries
-    </div>
-    <?php
-    if ($fetch->num_rows > 0) {
-      while ($fetch_result = $fetch->fetch_assoc()) {
-
-
-        ?>
-        <a href="#"
-          class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"><?php echo htmlspecialchars($fetch_result['name']); ?></a>
-        <?php
-      }
-    }
-    ?>
-  </div>
-  <?php
-  $num = 5;
-  $fetch = $conn->prepare('SELECT * FROM countries WHERE platform_id = ?');
-  $fetch->bind_param('i', $num);
-  $fetch->execute();
-  $fetch = $fetch->get_result();
-
-
-  ?>
-  <!-- WhatsApp Dropdown -->
-  <div class="dropdown-menu fixed bg-white border border-gray-200 rounded-lg shadow-xl py-2 min-w-48 hidden z-[9999]">
-    <div class="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide border-b border-gray-100">
-      Available Countries
-    </div>
-    <?php
-    if ($fetch->num_rows > 0) {
-      while ($fetch_result = $fetch->fetch_assoc()) {
-
-
-        ?>
-        <a href="#"
-          class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"><?php echo htmlspecialchars($fetch_result['name']); ?></a>
-        <?php
-      }
-    }
-    ?>
-  </div>
-  <!-- Main Content -->
-  <main class="pt-40 pb-8 px-6">
-    <div class="masonry-grid grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+    <div class="dropdown-menu fixed bg-white border border-gray-200 rounded-lg shadow-xl py-2 min-w-48 hidden z-[9999]">
+      <div class="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide border-b border-gray-100">
+        Available Countries
+      </div>
       <?php
-      if ($accounts->num_rows > 0) {
-        while ($accounts_result = $accounts->fetch_assoc()) {
-
+      if ($fetch->num_rows > 0) {
+        while ($fetch_result = $fetch->fetch_assoc()) {
+          $platform = $conn->prepare('SELECT * FROM platforms WHERE id = ?');
+          $platform->bind_param('i', $platform_id);
+          $platform->execute();
+          $platform = $platform->get_result();
+          $platform_result = $platform->fetch_assoc();
 
           ?>
-          <!-- Instagram Account Card -->
-          <div class="masonry-item ">
+          <a href="?search=<?php echo htmlspecialchars($platform_result['name']); ?>+<?php echo htmlspecialchars($fetch_result['short']); ?>"
+            class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
+            <?php echo htmlspecialchars($fetch_result['name']); ?>
+          </a>
+          <?php
+        }
+      }
+      ?>
+
+    </div>
+    <?php
+  }
+  ?>
+
+  <!-- Main Content -->
+  <main class="pt-40 pb-8 px-6">
+    <!-- Search Results Summary -->
+    <?php if (!empty($search_query)): ?>
+      <div class="mb-6">
+        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div class="flex items-center justify-between">
+            <div>
+              <h2 class="text-lg font-semibold text-blue-900">
+                Search Results for "<?php echo htmlspecialchars($search_query); ?>"
+              </h2>
+              <p class="text-blue-700">
+                Found <?php echo $accounts->num_rows; ?> account(s) matching your search
+              </p>
+            </div>
+            <button onclick="clearSearch()"
+              class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+              <i class="ri-close-line mr-1"></i>
+              Clear Search
+            </button>
+          </div>
+        </div>
+      </div>
+    <?php endif; ?>
+
+    <!-- No Results Message -->
+    <?php if ($accounts->num_rows === 0): ?>
+      <div class="text-center py-16">
+        <div class="w-24 h-24 mx-auto mb-6 bg-gray-100 rounded-full flex items-center justify-center">
+          <i class="ri-search-line text-4xl text-gray-400"></i>
+        </div>
+        <h3 class="text-xl font-semibold text-gray-900 mb-2">No accounts found</h3>
+        <?php if (!empty($search_query)): ?>
+          <p class="text-gray-600 mb-6">
+            No accounts match your search for "<span
+              class="font-medium"><?php echo htmlspecialchars($search_query); ?></span>".
+            Try searching with different keywords.
+          </p>
+          <button onclick="clearSearch()"
+            class="bg-primary text-white px-6 py-2 rounded-lg hover:bg-primary/90 transition-colors">
+            <i class="ri-refresh-line mr-2"></i>
+            View All Accounts
+          </button>
+        <?php else: ?>
+          <p class="text-gray-600">No accounts available at the moment. Please check back later.</p>
+        <?php endif; ?>
+      </div>
+    <?php else: ?>
+
+      <!-- Accounts Grid -->
+      <div class="masonry-grid grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4" id="accountsGrid">
+        <?php
+        while ($accounts_result = $accounts->fetch_assoc()) {
+          ?>
+          <!-- Account Card -->
+          <div class="masonry-item account-card"
+            data-platform="<?php echo htmlspecialchars($accounts_result['platform']); ?>"
+            data-username="<?php echo htmlspecialchars($accounts_result['username']); ?>"
+            data-followers="<?php echo htmlspecialchars($accounts_result['followers']); ?>"
+            data-price="<?php echo htmlspecialchars($accounts_result['price']); ?>"
+            data-location="<?php echo htmlspecialchars($accounts_result['location']); ?>"
+            data-tags="<?php echo htmlspecialchars($accounts_result['s_1'] . ' ' . $accounts_result['s_2'] . ' ' . $accounts_result['s_3']); ?>">
             <div
               class="card bg-white rounded-lg shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden group cursor-pointer">
               <div class="relative">
                 <img src="../assets/account_img/<?php echo htmlspecialchars($accounts_result['img']); ?>"
-                  alt="Fashion Instagram Account" class="w-full h-52 object-cover object-top" />
+                  alt="<?php echo htmlspecialchars($accounts_result['platform']); ?> Account"
+                  class="w-full h-52 object-cover object-top" />
                 <div class="absolute top-3 left-3 w-8 h-8 
-                                    <?php
-                                    if ($accounts_result['platform'] === 'facebook') {
-                                      echo 'bg-blue-600';
-                                    } elseif ($accounts_result['platform'] === 'instagram') {
-                                      echo 'bg-gradient-to-r from-purple-500 to-pink-500';
-                                    } elseif ($accounts_result['platform'] === 'tiktok') {
-                                      echo 'bg-black';
-                                    } elseif ($accounts_result['platform'] === 'whatsapp') {
-                                      echo 'bg-green-500';
-                                    } elseif ($accounts_result['platform'] === 'youtube') {
-                                      echo 'bg-red-500';
-                                    }
-
-
-                                    ?>
-                                    
-                                    rounded-full flex items-center justify-center">
+                          <?php
+                          if ($accounts_result['platform'] === 'facebook') {
+                            echo 'bg-blue-600';
+                          } elseif ($accounts_result['platform'] === 'instagram') {
+                            echo 'bg-gradient-to-r from-purple-500 to-pink-500';
+                          } elseif ($accounts_result['platform'] === 'tiktok') {
+                            echo 'bg-black';
+                          } elseif ($accounts_result['platform'] === 'whatsapp') {
+                            echo 'bg-green-500';
+                          } elseif ($accounts_result['platform'] === 'youtube') {
+                            echo 'bg-red-500';
+                          }
+                          ?>
+                          rounded-full flex items-center justify-center">
                   <i class="ri-<?php echo htmlspecialchars($accounts_result['platform']); ?>-fill text-white text-lg"></i>
                 </div>
                 <div class="absolute top-3 right-3 bg-white bg-opacity-90 backdrop-blur-sm px-2 py-1 rounded-full">
-                  <span
-                    class="text-xs font-semibold text-gray-700"><?php echo htmlspecialchars($accounts_result['status']); ?></span>
+                  <span class="text-xs font-semibold text-gray-700">
+                    <?php echo htmlspecialchars($accounts_result['status']); ?>
+                  </span>
                 </div>
               </div>
               <div class="p-4">
@@ -417,7 +485,8 @@ $accounts = $accounts->get_result();
                 <div class="flex items-center justify-between mb-3">
                   <div class="flex items-center space-x-4 text-sm text-gray-600">
                     <span class="flex items-center">
-                      <i class="ri-user-line mr-1"></i><?php
+                      <i class="ri-user-line mr-1"></i>
+                      <?php
                       if (!function_exists('format_likes')) {
                         function format_likes($number)
                         {
@@ -428,7 +497,6 @@ $accounts = $accounts->get_result();
                             return $number;
                           }
                         }
-
                       }
                       if ($accounts_result['followers'] >= 1000) {
                         $formatted_followers = format_likes($accounts_result['followers']);
@@ -436,48 +504,38 @@ $accounts = $accounts->get_result();
                       } else {
                         echo htmlspecialchars(number_format($accounts_result['followers']));
                       }
-
                       ?>
                       followers
                     </span>
                     <span class="flex items-center">
-                      <i class="ri-map-pin-line mr-1"></i><?php echo htmlspecialchars($accounts_result['location']); ?>
+                      <i class="ri-map-pin-line mr-1"></i>
+                      <?php echo htmlspecialchars($accounts_result['location']); ?>
                     </span>
                   </div>
                 </div>
                 <div class="mb-3">
                   <div class="flex flex-wrap gap-1">
-                    <?php
-                    if ($accounts_result['s_1'] !== '') {
-
-                      ?>
-                      <span
-                        class="bg-gray-100 text-gray-600 px-2 py-1 rounded text-xs"><?php echo htmlspecialchars($accounts_result['s_1']); ?></span>
-                      <?php
-                    } ?>
-                    <?php
-                    if ($accounts_result['s_2'] !== '') {
-
-                      ?>
-
-                      <span
-                        class="bg-gray-100 text-gray-600 px-2 py-1 rounded text-xs"><?php echo htmlspecialchars($accounts_result['s_2']); ?></span>
-                      <?php
-                    } ?>
-                    <?php
-                    if ($accounts_result['s_3'] !== '') {
-
-                      ?>
-
-                      <span
-                        class="bg-gray-100 text-gray-600 px-2 py-1 rounded text-xs"><?php echo htmlspecialchars($accounts_result['s_3']); ?></span>
-                      <?php
-                    } ?>
+                    <?php if ($accounts_result['s_1'] !== ''): ?>
+                      <span class="bg-gray-100 text-gray-600 px-2 py-1 rounded text-xs">
+                        <?php echo htmlspecialchars($accounts_result['s_1']); ?>
+                      </span>
+                    <?php endif; ?>
+                    <?php if ($accounts_result['s_2'] !== ''): ?>
+                      <span class="bg-gray-100 text-gray-600 px-2 py-1 rounded text-xs">
+                        <?php echo htmlspecialchars($accounts_result['s_2']); ?>
+                      </span>
+                    <?php endif; ?>
+                    <?php if ($accounts_result['s_3'] !== ''): ?>
+                      <span class="bg-gray-100 text-gray-600 px-2 py-1 rounded text-xs">
+                        <?php echo htmlspecialchars($accounts_result['s_3']); ?>
+                      </span>
+                    <?php endif; ?>
                   </div>
                 </div>
                 <div class="flex items-center justify-between">
                   <span class="text-2xl font-bold text-primary">
-                    <?php echo htmlspecialchars(number_format($accounts_result['price'])); ?> XAF</span>
+                    <?php echo htmlspecialchars(number_format($accounts_result['price'])); ?> XAF
+                  </span>
                   <div class="hover-button">
                     <button
                       class="bg-black/90 hover:bg-black text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap !rounded-button">
@@ -490,12 +548,121 @@ $accounts = $accounts->get_result();
           </div>
           <?php
         }
-      }
-      ?>
-    </div>
+        ?>
+      </div>
+    <?php endif; ?>
   </main>
-  <script src="assets/script.js">
+  <script src="assets/script.js"></script>
+  <script>
+    // Improved search functionality
+    function clearSearch() {
+      window.location.href = window.location.pathname;
+    }
 
+    // Enhanced search with better term handling
+    let searchTimeout;
+    const searchInputs = document.querySelectorAll('#searchInput, #mobileSearchInput');
+
+    searchInputs.forEach(input => {
+      input.addEventListener('input', function () {
+        clearTimeout(searchTimeout);
+        const query = this.value.trim();
+
+        // Debounce search - wait 800ms after user stops typing
+        searchTimeout = setTimeout(() => {
+          if (query.length >= 2 || query.length === 0) {
+            updateSearch(query);
+          }
+        }, 800);
+      });
+
+      // Submit on Enter key
+      input.addEventListener('keypress', function (e) {
+        if (e.key === 'Enter') {
+          clearTimeout(searchTimeout);
+          const query = this.value.trim();
+          updateSearch(query);
+        }
+      });
+    });
+
+    // Function to update search
+    function updateSearch(query) {
+      const url = new URL(window.location);
+      if (query) {
+        url.searchParams.set('search', query);
+      } else {
+        url.searchParams.delete('search');
+      }
+      window.location.href = url.toString();
+    }
+
+    // Sync search inputs (desktop and mobile)
+    searchInputs.forEach((input, index) => {
+      input.addEventListener('input', function () {
+        searchInputs.forEach((otherInput, otherIndex) => {
+          if (index !== otherIndex) {
+            otherInput.value = this.value;
+          }
+        });
+      });
+    });
+
+    // Enhanced search term highlighting
+    function highlightSearchTerms() {
+      const searchQuery = "<?php echo htmlspecialchars($search_query); ?>";
+      if (!searchQuery) return;
+
+      // Split search query into terms
+      const searchTerms = searchQuery.toLowerCase().split(' ').filter(term => term.length > 0);
+      if (searchTerms.length === 0) return;
+
+      const cards = document.querySelectorAll('.account-card');
+      cards.forEach(card => {
+        const textElements = card.querySelectorAll('h3, span:not(.bg-gray-100)');
+        textElements.forEach(element => {
+          let html = element.innerHTML;
+
+          searchTerms.forEach(term => {
+            const regex = new RegExp(`(${term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+            html = html.replace(regex, '<mark class="bg-yellow-200 px-1 rounded">$1</mark>');
+          });
+
+          element.innerHTML = html;
+        });
+      });
+    }
+
+    // Search suggestions (optional enhancement)
+    function addSearchSuggestions() {
+      const searchInputs = document.querySelectorAll('#searchInput, #mobileSearchInput');
+
+      searchInputs.forEach(input => {
+        input.addEventListener('focus', function () {
+          // You can add search suggestions here
+          showSearchSuggestions(this);
+        });
+      });
+    }
+
+    function showSearchSuggestions(input) {
+      // Example suggestions based on available data
+      const suggestions = [
+        'facebook cameroon',
+        'instagram 1000 followers',
+        'tiktok verified',
+        'whatsapp business',
+        'youtube monetized'
+      ];
+
+      // Implementation for showing suggestions would go here
+    }
+
+    // Call enhanced functions
+    document.addEventListener('DOMContentLoaded', function () {
+      highlightSearchTerms();
+      addSearchSuggestions();
+    });
   </script>
 </body>
 

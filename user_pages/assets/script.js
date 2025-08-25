@@ -49,24 +49,6 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   });
 
-  // Handle country selection
-  document.querySelectorAll(".dropdown-menu a").forEach((link) => {
-    link.addEventListener("click", function (e) {
-      e.preventDefault();
-      const country = this.textContent.trim();
-      const dropdown = this.closest(".dropdown-menu");
-
-      // You can add logic here to handle the country selection
-      console.log("Selected country:", country);
-
-      // Close the dropdown
-      dropdown.classList.add("hidden");
-
-      // Optional: Update button appearance to show selection
-      // button.classList.add('ring-2', 'ring-blue-500');
-    });
-  });
-
   // Handle scroll repositioning
   window.addEventListener("scroll", function () {
     dropdownMenus.forEach((menu) => {
