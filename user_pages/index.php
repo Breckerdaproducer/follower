@@ -396,7 +396,13 @@ include('assets/search.php');
                         echo htmlspecialchars(number_format($accounts_result['followers']));
                       }
                       ?>
-                      followers
+                      <?php
+                      if ($accounts_result['platform'] === 'youtube') {
+                        echo 'subcribers';
+                      } else {
+                        echo 'followers';
+                      }
+                      ?>
                     </span>
                     <span class="flex items-center">
                       <i class="ri-map-pin-line mr-1"></i>
